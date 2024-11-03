@@ -23,17 +23,19 @@ class BaseDataLoader(ABC):
         self.y_train = []
         self.y_test = []
 
+        self.trim_perc = 1
+
     def min_class_samples(self) -> int:
-        return pc.min(self.class_table['train_count']).as_py()
+        return pc.min(self.class_table['train_count']).as_py() * self.trim_perc
     
     def avg_class_samples(self) -> int:
-        return pc.mean(self.class_table['train_count']).as_py()
+        return pc.mean(self.class_table['train_count']).as_py() * self.trim_perc
     
     def median_class_samples(self) -> int:
-        return pc.approximate_median(self.class_table['train_count']).as_py()
+        return pc.approximate_median(self.class_table['train_count']).as_py() * self.trim_perc
     
     def max_class_samples(self) -> int:
-        return pc.max(self.class_table['train_count']).as_py()
+        return pc.max(self.class_table['train_count']).as_py() * self.trim_perc
     
     def min_sample_length(self) -> int:
         return pc.min(self.class_table['min_length']).as_py()
@@ -65,22 +67,24 @@ class BaseDataLoader(ABC):
         '''
         return self.class_label_di[idx]
 
-    def trim(self, train_size : float = -1, test_size : float = -1, random_state : int = 8) -> None:
+    def trim(self, trim_perc : float, random_state : int = 8) -> None:
         '''
         Given the datasets, train/test, we trim them down to specified sizes
-        (float for percentage, int for count). Keeping the original class distribution.
+        (float for percentage). Keeping the original class distribution.
         '''
-        if train_size > 0:
-            self.X_train, _, self.y_train, _ = train_test_split(self.X_train, self.y_train, train_size=train_size,
-                                                                random_state=random_state, shuffle=True,
-                                                                stratify=self.y_train)
-            self.y_train = np.array(self.y_train, dtype=np.int32)
+        self.trim_perc = trim_perc
 
-        if test_size > 0:
-            self.X_test, _, self.y_test, _ = train_test_split(self.X_test, self.y_test, train_size=test_size,
-                                                              random_state=random_state, shuffle=True,
-                                                              stratify=self.y_test)
-            self.y_test = np.array(self.y_test, dtype=np.int32)
+        # Train
+        self.X_train, _, self.y_train, _ = train_test_split(self.X_train, self.y_train, train_size=trim_perc,
+                                                            random_state=random_state, shuffle=True,
+                                                            stratify=self.y_train)
+        self.y_train = np.array(self.y_train, dtype=np.int32)
+
+        # Test
+        self.X_test, _, self.y_test, _ = train_test_split(self.X_test, self.y_test, train_size=trim_perc,
+                                                            random_state=random_state, shuffle=True,
+                                                            stratify=self.y_test)
+        self.y_test = np.array(self.y_test, dtype=np.int32)
 
     def __str__(self) -> str:
         s = []
